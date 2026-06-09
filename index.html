@@ -1,0 +1,44 @@
+<div id="tree"></div>
+
+<script>
+const owner = "ranekov";
+const repo = "Lucky-Bear";
+const branch = "main";
+
+async function loadTree() {
+  const res = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`
+  );
+  const data = await res.json();
+
+  const tree = {};
+  data.tree.forEach(item => {
+    const parts = item.path.split("/");
+    let current = tree;
+
+    parts.forEach((part, i) => {
+      if (!current[part]) {
+        current[part] = (i === parts.length - 1 && item.type === "blob")
+          ? null
+          : {};
+      }
+      current = current[part];
+    });
+  });
+
+  document.getElementById("tree").innerHTML = render(tree);
+}
+
+function render(obj, indent = 0) {
+  let html = "<ul>";
+  for (const key in obj) {
+    html += `<li>${key}`;
+    if (obj[key]) html += render(obj[key], indent + 1);
+    html += "</li>";
+  }
+  html += "</ul>";
+  return html;
+}
+
+loadTree();
+</script>
