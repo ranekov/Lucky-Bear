@@ -3,28 +3,26 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>GitHub Tree Viewer</title>
+<title>GitHub Pages Tree Viewer</title>
 
 <style>
 :root {
   --bg: #0f172a;
   --card: #111827;
   --text: #e5e7eb;
-  --muted: #9ca3af;
-  --accent: #60a5fa;
   --hover: #1f2937;
 }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
 }
 
 .app {
   max-width: 900px;
-  margin: 0 auto;
+  margin: auto;
   padding: 20px;
 }
 
@@ -36,9 +34,8 @@ body {
 
 .tree {
   background: var(--card);
-  border-radius: 12px;
   padding: 10px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  border-radius: 12px;
 }
 
 ul {
@@ -57,25 +54,16 @@ li {
   padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
-  transition: 0.2s;
+  text-decoration: none;
+  color: var(--text);
 }
 
 .node:hover, a.node:hover {
   background: var(--hover);
 }
 
-a.node {
-  text-decoration: none;
-  color: var(--text);
-}
-
-.folder {
-  font-weight: 500;
-}
-
-.file {
-  font-weight: 400;
-}
+.folder::before { content: "📁 "; }
+.file::before { content: "📄 "; }
 
 .children {
   margin-left: 14px;
@@ -89,9 +77,7 @@ a.node {
 }
 
 @media (max-width: 600px) {
-  .app {
-    padding: 10px;
-  }
+  .app { padding: 10px; }
 }
 </style>
 </head>
@@ -99,17 +85,17 @@ a.node {
 <body>
 
 <div class="app">
-  <div class="header">📁 GitHub Repo Tree Viewer</div>
+  <div class="header">📁 GitHub Pages File Tree</div>
   <div id="tree" class="tree"></div>
 </div>
 
 <script>
-const owner = "owner";
-const repo = "repo";
+const owner = "ranekov";
+const repo = "Lucky-Bear";
 const branch = "main";
 
-function getGitHubUrl(path) {
-  return `https://ranekov.github.io/Lucky-Bear/${encodeURI(path)}`;
+function getPagesUrl(path) {
+  return `https://${owner}.github.io/${repo}/${encodeURI(path)}`;
 }
 
 async function loadTree() {
@@ -159,7 +145,7 @@ function render(obj, parentPath = "") {
     } else {
       html += `
         <a class="node file"
-           href="${getGitHubUrl(fullPath)}"
+           href="${getPagesUrl(fullPath)}"
            target="_blank"
            rel="noopener noreferrer">
           📄 ${key}
