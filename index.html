@@ -105,16 +105,42 @@ async function loadTree() {
 
   const data = await res.json();
 
+  let currentPath = decodeURIComponent(location.pathname);
+
+  const repoPrefix = `/${repo}/`;
+
+  if (currentPath.startsWith(repoPrefix)) {
+    currentPath = currentPath.slice(repoPrefix.length);
+  } else {
+    currentPath = currentPath.replace(/^\/+/, "");
+  }
+
+  if (
+    currentPath === "" ||
+    currentPath.endsWith("/")
+  ) {
+    currentPath += "index.html";
+  }
+
   const tree = {};
 
   data.tree.forEach(item => {
+    if (
+      item.type === "blob" &&
+      item.path === currentPath
+    ) {
+      return;
+    }
+
     const parts = item.path.split("/");
     let current = tree;
 
     parts.forEach((part, i) => {
       if (!current[part]) {
         current[part] =
-          (i === parts.length - 1 && item.type === "blob") ? null : {};
+          (i === parts.length - 1 && item.type === "blob")
+            ? null
+            : {};
       }
       current = current[part];
     });
