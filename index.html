@@ -1,9 +1,82 @@
-<div id="tree"></div>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Files</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui;
+  background: #0f111a;
+  color: #e6e6e6;
+  display: flex;
+  height: 100vh;
+}
+
+#sidebar {
+  width: 320px;
+  background: #161b22;
+  overflow: auto;
+  border-right: 1px solid #2a2f3a;
+}
+
+#viewer {
+  flex: 1;
+  padding: 20px;
+  overflow: auto;
+  background: #0f111a;
+}
+
+ul {
+  list-style: none;
+  padding-left: 14px;
+}
+
+li {
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+li:hover {
+  background: #222938;
+}
+
+.folder::before {
+  content: "📁 ";
+}
+
+.file::before {
+  content: "📄 ";
+  color: #8ab4f8;
+}
+
+.hidden {
+  display: none;
+}
+
+pre {
+  background: #161b22;
+  padding: 16px;
+  border-radius: 10px;
+  overflow: auto;
+}
+</style>
+</head>
+
+<body>
+
+<div id="sidebar"></div>
+<div id="viewer">ファイルを選択してください</div>
 
 <script>
 const owner = "ranekov";
 const repo = "Lucky-Bear";
 const branch = "main";
+
+let fileMap = {};
 
 async function loadTree() {
   const res = await fetch(
@@ -21,20 +94,18 @@ async function loadTree() {
       const isFile = (i === parts.length - 1 && item.type === "blob");
 
       if (!current[part]) {
-        current[part] = isFile
-          ? { __file: item.path }
-          : {};
+        current[part] = isFile ? { __file: item.path } : {};
       }
 
       current = current[part];
     });
+
+    if (item.type === "blob") {
+      fileMap[item.path] = item.path;
+    }
   });
 
-  document.getElementById("tree").innerHTML = render(tree);
-}
-
-function githubUrl(path) {
-  return `https://github.com/${owner}/${repo}/blob/${branch}/${encodeURI(path)}`;
+  document.getElementById("sidebar").innerHTML = render(tree);
 }
 
 function render(obj) {
@@ -43,18 +114,17 @@ function render(obj) {
   for (const key in obj) {
     if (key === "__file") continue;
 
-    const value = obj[key];
+    const val = obj[key];
 
-    // ファイル
-    if (value && value.__file) {
-      const url = githubUrl(value.__file);
-      html += `<li>📄 <a href="${url}" target="_blank" rel="noopener">${escapeHtml(key)}</a></li>`;
-    }
-    // フォルダ
-    else {
-      html += `<li>📁 ${escapeHtml(key)}`;
-      html += render(value);
-      html += "</li>";
+    if (val.__file) {
+      html += `<li class="file" onclick="openFile('${val.__file}')">${escape(key)}</li>`;
+    } else {
+      const id = Math.random().toString(36).slice(2);
+
+      html += `<li class="folder" onclick="toggle('${id}')">${escape(key)}</li>`;
+      html += `<div id="${id}" class="hidden">`;
+      html += render(val);
+      html += `</div>`;
     }
   }
 
@@ -62,15 +132,34 @@ function render(obj) {
   return html;
 }
 
-// HTMLエスケープ（重要）
-function escapeHtml(str) {
+function toggle(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle("hidden");
+}
+
+async function openFile(path) {
+  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+
+  const res = await fetch(url);
+  const text = await res.text();
+
+  document.getElementById("viewer").innerHTML =
+    `<pre>${escapeHtml(text)}</pre>`;
+}
+
+function escape(str) {
   return str
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replaceAll(">", "&gt;");
+}
+
+function escapeHtml(str) {
+  return escape(str);
 }
 
 loadTree();
 </script>
+
+</body>
+</html>
