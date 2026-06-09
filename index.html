@@ -1,7 +1,9 @@
-<div class="app">
-  <div class="header">📁 GitHub Repo Tree</div>
-  <div id="tree" class="tree"></div>
-</div>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GitHub Tree Viewer</title>
 
 <style>
 :root {
@@ -49,7 +51,7 @@ li {
   margin: 4px 0;
 }
 
-.node {
+.node, a.node {
   display: flex;
   align-items: center;
   padding: 6px 10px;
@@ -58,18 +60,21 @@ li {
   transition: 0.2s;
 }
 
-.node:hover {
+.node:hover, a.node:hover {
   background: var(--hover);
 }
 
-.folder::before {
-  content: "📁";
-  margin-right: 8px;
+a.node {
+  text-decoration: none;
+  color: var(--text);
 }
 
-.file::before {
-  content: "📄";
-  margin-right: 8px;
+.folder {
+  font-weight: 500;
+}
+
+.file {
+  font-weight: 400;
 }
 
 .children {
@@ -83,29 +88,39 @@ li {
   display: block;
 }
 
-.toggle {
-  user-select: none;
-}
-
 @media (max-width: 600px) {
   .app {
     padding: 10px;
   }
 }
 </style>
+</head>
+
+<body>
+
+<div class="app">
+  <div class="header">📁 GitHub Repo Tree Viewer</div>
+  <div id="tree" class="tree"></div>
+</div>
 
 <script>
-const owner = "ranekov";
-const repo = "Lucky-Bear";
+const owner = "owner";
+const repo = "repo";
 const branch = "main";
+
+function getGitHubUrl(path) {
+  return `https://ranekov.github.io/Lucky-Bear/${encodeURI(path)}`;
+}
 
 async function loadTree() {
   const res = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`
   );
+
   const data = await res.json();
 
   const tree = {};
+
   data.tree.forEach(item => {
     const parts = item.path.split("/");
     let current = tree;
@@ -113,9 +128,7 @@ async function loadTree() {
     parts.forEach((part, i) => {
       if (!current[part]) {
         current[part] =
-          (i === parts.length - 1 && item.type === "blob")
-            ? null
-            : {};
+          (i === parts.length - 1 && item.type === "blob") ? null : {};
       }
       current = current[part];
     });
@@ -125,24 +138,38 @@ async function loadTree() {
   bindToggle();
 }
 
-function render(obj) {
+function render(obj, parentPath = "") {
   let html = "<ul>";
+
   for (const key in obj) {
+    const fullPath = parentPath ? `${parentPath}/${key}` : key;
     const isFolder = obj[key] !== null;
 
-    html += `
-      <li>
-        <div class="node ${isFolder ? "folder toggle" : "file"}">
-          ${key}
-        </div>
-    `;
+    html += "<li>";
 
     if (isFolder) {
-      html += `<div class="children">${render(obj[key])}</div>`;
+      html += `
+        <div class="node folder toggle">
+          📁 ${key}
+        </div>
+        <div class="children">
+          ${render(obj[key], fullPath)}
+        </div>
+      `;
+    } else {
+      html += `
+        <a class="node file"
+           href="${getGitHubUrl(fullPath)}"
+           target="_blank"
+           rel="noopener noreferrer">
+          📄 ${key}
+        </a>
+      `;
     }
 
     html += "</li>";
   }
+
   html += "</ul>";
   return html;
 }
@@ -150,6 +177,7 @@ function render(obj) {
 function bindToggle() {
   document.querySelectorAll(".toggle").forEach(el => {
     el.addEventListener("click", e => {
+      e.preventDefault();
       e.stopPropagation();
       el.parentElement.classList.toggle("open");
     });
@@ -158,3 +186,6 @@ function bindToggle() {
 
 loadTree();
 </script>
+
+</body>
+</html>
