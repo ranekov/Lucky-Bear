@@ -136,7 +136,7 @@ function render(obj, parentPath = "") {
     if (isFolder) {
       html += `
         <div class="node folder toggle">
-          📁 ${key}
+          ${key}
         </div>
         <div class="children">
           ${render(obj[key], fullPath)}
@@ -148,7 +148,7 @@ function render(obj, parentPath = "") {
            href="${getPagesUrl(fullPath)}"
            target="_blank"
            rel="noopener noreferrer">
-          📄 ${key}
+          ${key}
         </a>
       `;
     }
