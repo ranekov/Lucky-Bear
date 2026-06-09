@@ -1,82 +1,103 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Files</title>
+<div class="app">
+  <div class="header">📁 GitHub Repo Tree</div>
+  <div id="tree" class="tree"></div>
+</div>
 
 <style>
+:root {
+  --bg: #0f172a;
+  --card: #111827;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --accent: #60a5fa;
+  --hover: #1f2937;
+}
+
 body {
   margin: 0;
-  font-family: ui-sans-serif, system-ui;
-  background: #0f111a;
-  color: #e6e6e6;
-  display: flex;
-  height: 100vh;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
 }
 
-#sidebar {
-  width: 320px;
-  background: #161b22;
-  overflow: auto;
-  border-right: 1px solid #2a2f3a;
-}
-
-#viewer {
-  flex: 1;
+.app {
+  max-width: 900px;
+  margin: 0 auto;
   padding: 20px;
-  overflow: auto;
-  background: #0f111a;
+}
+
+.header {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.tree {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
 ul {
   list-style: none;
-  padding-left: 14px;
+  padding-left: 18px;
+  margin: 0;
 }
 
 li {
-  cursor: pointer;
-  padding: 4px 6px;
-  border-radius: 6px;
+  margin: 4px 0;
 }
 
-li:hover {
-  background: #222938;
+.node {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.node:hover {
+  background: var(--hover);
 }
 
 .folder::before {
-  content: "📁 ";
+  content: "📁";
+  margin-right: 8px;
 }
 
 .file::before {
-  content: "📄 ";
-  color: #8ab4f8;
+  content: "📄";
+  margin-right: 8px;
 }
 
-.hidden {
+.children {
+  margin-left: 14px;
+  border-left: 1px solid #374151;
+  padding-left: 10px;
   display: none;
 }
 
-pre {
-  background: #161b22;
-  padding: 16px;
-  border-radius: 10px;
-  overflow: auto;
+.open > .children {
+  display: block;
+}
+
+.toggle {
+  user-select: none;
+}
+
+@media (max-width: 600px) {
+  .app {
+    padding: 10px;
+  }
 }
 </style>
-</head>
-
-<body>
-
-<div id="sidebar"></div>
-<div id="viewer">ファイルを選択してください</div>
 
 <script>
 const owner = "ranekov";
 const repo = "Lucky-Bear";
 const branch = "main";
-
-let fileMap = {};
 
 async function loadTree() {
   const res = await fetch(
@@ -85,81 +106,55 @@ async function loadTree() {
   const data = await res.json();
 
   const tree = {};
-
   data.tree.forEach(item => {
     const parts = item.path.split("/");
     let current = tree;
 
     parts.forEach((part, i) => {
-      const isFile = (i === parts.length - 1 && item.type === "blob");
-
       if (!current[part]) {
-        current[part] = isFile ? { __file: item.path } : {};
+        current[part] =
+          (i === parts.length - 1 && item.type === "blob")
+            ? null
+            : {};
       }
-
       current = current[part];
     });
-
-    if (item.type === "blob") {
-      fileMap[item.path] = item.path;
-    }
   });
 
-  document.getElementById("sidebar").innerHTML = render(tree);
+  document.getElementById("tree").innerHTML = render(tree);
+  bindToggle();
 }
 
 function render(obj) {
   let html = "<ul>";
-
   for (const key in obj) {
-    if (key === "__file") continue;
+    const isFolder = obj[key] !== null;
 
-    const val = obj[key];
+    html += `
+      <li>
+        <div class="node ${isFolder ? "folder toggle" : "file"}">
+          ${key}
+        </div>
+    `;
 
-    if (val.__file) {
-      html += `<li class="file" onclick="openFile('${val.__file}')">${escape(key)}</li>`;
-    } else {
-      const id = Math.random().toString(36).slice(2);
-
-      html += `<li class="folder" onclick="toggle('${id}')">${escape(key)}</li>`;
-      html += `<div id="${id}" class="hidden">`;
-      html += render(val);
-      html += `</div>`;
+    if (isFolder) {
+      html += `<div class="children">${render(obj[key])}</div>`;
     }
-  }
 
+    html += "</li>";
+  }
   html += "</ul>";
   return html;
 }
 
-function toggle(id) {
-  const el = document.getElementById(id);
-  if (el) el.classList.toggle("hidden");
-}
-
-async function openFile(path) {
-  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
-
-  const res = await fetch(url);
-  const text = await res.text();
-
-  document.getElementById("viewer").innerHTML =
-    `<pre>${escapeHtml(text)}</pre>`;
-}
-
-function escape(str) {
-  return str
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
-
-function escapeHtml(str) {
-  return escape(str);
+function bindToggle() {
+  document.querySelectorAll(".toggle").forEach(el => {
+    el.addEventListener("click", e => {
+      e.stopPropagation();
+      el.parentElement.classList.toggle("open");
+    });
+  });
 }
 
 loadTree();
 </script>
-
-</body>
-</html>
