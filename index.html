@@ -12,16 +12,20 @@ async function loadTree() {
   const data = await res.json();
 
   const tree = {};
+
   data.tree.forEach(item => {
     const parts = item.path.split("/");
     let current = tree;
 
     parts.forEach((part, i) => {
+      const isFile = (i === parts.length - 1 && item.type === "blob");
+
       if (!current[part]) {
-        current[part] = (i === parts.length - 1 && item.type === "blob")
-          ? null
+        current[part] = isFile
+          ? { __file: item.path }
           : {};
       }
+
       current = current[part];
     });
   });
@@ -29,15 +33,43 @@ async function loadTree() {
   document.getElementById("tree").innerHTML = render(tree);
 }
 
-function render(obj, indent = 0) {
+function githubUrl(path) {
+  return `https://github.com/${owner}/${repo}/blob/${branch}/${encodeURI(path)}`;
+}
+
+function render(obj) {
   let html = "<ul>";
+
   for (const key in obj) {
-    html += `<li>${key}`;
-    if (obj[key]) html += render(obj[key], indent + 1);
-    html += "</li>";
+    if (key === "__file") continue;
+
+    const value = obj[key];
+
+    // ファイル
+    if (value && value.__file) {
+      const url = githubUrl(value.__file);
+      html += `<li>📄 <a href="${url}" target="_blank" rel="noopener">${escapeHtml(key)}</a></li>`;
+    }
+    // フォルダ
+    else {
+      html += `<li>📁 ${escapeHtml(key)}`;
+      html += render(value);
+      html += "</li>";
+    }
   }
+
   html += "</ul>";
   return html;
+}
+
+// HTMLエスケープ（重要）
+function escapeHtml(str) {
+  return str
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 loadTree();
